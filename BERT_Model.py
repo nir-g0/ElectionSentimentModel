@@ -1,5 +1,5 @@
 import torch  # Import PyTorch library
-from transformers import BertTokenizer, BertForSequenceClassification  # Import BERT-related modules from transformers
+from transformers import BertTokenizer, BertForSequenceClassification, get_linear_schedule_with_warmup # Import BERT-related modules from transformers
 from torch.utils.data import DataLoader, TensorDataset  # Import data handling utilities from PyTorch
 import numpy as np  # Import NumPy for numerical operations
 import pandas as pd  # Import Pandas for data manipulation
@@ -30,7 +30,7 @@ def encode_data(texts, labels, tokenizer, max_length=128):
     input_ids = []  # Initialize list to store tokenized input ids
     attention_masks = []  # Initialize list to store attention masks
     shortened_labels = []  # Initialize list to store labels for processed texts
-    for i in range(0, len(texts), 10000):  # Process texts in batches of 10000
+    for i in range(0, len(texts), 5000):  # Process texts in batches of 10000
         encoded = tokenizer.encode_plus(  # Encode a single text
             texts[i],
             add_special_tokens=True,
@@ -70,12 +70,22 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # Set dev
 model.to(device)  # Move model to the selected device
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)  # Initialize AdamW optimizer
-epochs = 8  # Set number of training epochs
+
+epochs = 12  # Set number of training epochs
+
+total_steps = len(train_dataloader) * epochs  # Calculate the total number of training steps
+warmup_steps = int(0.1 * total_steps)  # 10% of the total steps
+scheduler = get_linear_schedule_with_warmup(optimizer, 
+                                            num_warmup_steps=warmup_steps, 
+                                            num_training_steps=total_steps)
 
 for epoch in range(epochs):  # Loop through epochs
+    print('----------------')
     print(f"Epoch #{epoch}")  # Print current epoch number
+    print('----------------')
     model.train()  # Set model to training mode
     for batch in train_dataloader:  # Iterate through batches
+        print('next bactch...')
         batch = tuple(t.to(device) for t in batch)  # Move batch to device
         inputs = {'input_ids': batch[0],
                   'attention_mask': batch[1],
@@ -85,7 +95,9 @@ for epoch in range(epochs):  # Loop through epochs
         loss = outputs.loss  # Get loss
         loss.backward()  # Backward pass
         optimizer.step()  # Update weights
+        scheduler.step()
         optimizer.zero_grad()  # Reset gradients
+    print(f"Current learning rate: {scheduler.get_last_lr()[0]}")
 print('Model Trained')  # Print confirmation message
 
 # Validation
