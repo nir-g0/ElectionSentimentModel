@@ -143,4 +143,4 @@ def predict_sentiment(text):  # Define function to predict sentiment
 # Example usage
 text = "I love this movie! It's amazing!"  # Example input text
 sentiment = predict_sentiment(text)  # Predict sentiment
-print(f"Sentiment: {sentiment}")  # Print predicted sentiment
+print(f"Sentiment: {sentiment}")  # Print predicted sentiment y7h,.m 
